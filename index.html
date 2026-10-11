@@ -5,37 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Smart Parking - Request My Car</title>
 <style>
-  :root { color-scheme: light; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
          background: #f5f7fa; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #141e32; }
-  .card { text-align: center; padding: 32px 24px; max-width: 360px; }
-  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: .5px; }
-  .sub { color: #6e737d; margin: 0 0 22px; }
-  .token { font-size: 34px; font-weight: 700; margin: 0 0 22px; }
-  a.btn { display: inline-block; background: #009950; color: #fff; text-decoration: none;
-          padding: 14px 28px; border-radius: 6px; font-size: 17px; }
-  .ar { direction: rtl; color: #6e737d; margin-top: 10px; }
+  .card { text-align: center; padding: 32px 24px; max-width: 360px; width: 100%; }
+  h1 { font-size: 26px; margin: 0 0 18px; letter-spacing: .5px; }
+  .token { font-size: 40px; font-weight: 700; margin: 0 0 24px; }
+  button { background: #009950; color: #fff; border: 0; padding: 16px 30px; border-radius: 8px;
+           font-size: 18px; font-family: inherit; cursor: pointer; width: 100%; max-width: 300px; }
+  button:disabled { background: #9aa0a8; }
+  .msg { margin-top: 20px; font-size: 18px; min-height: 52px; }
+  .ok { color: #009950; font-weight: 600; }
+  .err { color: #e11e26; }
+  .ar { direction: rtl; }
   .foot { margin-top: 34px; font-size: 12px; color: #9aa0a8; }
 </style>
 </head>
 <body>
 <div class="card">
   <h1>SMART PARKING</h1>
-  <p class="sub">Opening your car request&hellip;</p>
-  <p class="ar">جاري فتح طلب سيارتك&hellip;</p>
   <p class="token" id="tok"></p>
-  <a class="btn" id="go" href="#">Request my car</a>
+  <button id="go">Request my car &nbsp;|&nbsp; اطلب سيارتي</button>
+  <div class="msg" id="msg"></div>
   <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
 </div>
 <script>
-  // ---- the client's "Request My Car" form (pre-filled link, token goes at the end) ----
-  var FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSf1sBqOsFaHxBPcj7DC06Lr24bgYVz-iT5SZShrSFddoEicDQ/viewform?usp=pp_url&entry.1183704098=";
+  // ---- the client's "Request My Car" Google Form ----
+  var FORM_ID  = "1FAIpQLSf1sBqOsFaHxBPcj7DC06Lr24bgYVz-iT5SZShrSFddoEicDQ";
+  var ENTRY    = "entry.1183704098";          // the Token Number question
+  // false = one tap on the button (safe: no request by mistake)
+  // true  = request is sent the moment the link is opened
+  var AUTO_SUBMIT = false;
 
   var t = (new URLSearchParams(location.search).get("t") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
-  var target = FORM_BASE + encodeURIComponent(t);
+  var btn = document.getElementById("go"), msg = document.getElementById("msg");
   document.getElementById("tok").textContent = t;
-  document.getElementById("go").href = target;
-  if (t) { location.replace(target); }   // straight to the form, no extra click
+
+  function done() {
+    btn.disabled = true;
+    btn.textContent = "Requested \u2713";
+    msg.innerHTML = '<div class="ok">\u2705 Your car is being prepared!</div>' +
+                    '<div class="ok ar">\u2705 \u062c\u0627\u0631\u064a \u062a\u062d\u0636\u064a\u0631 \u0633\u064a\u0627\u0631\u062a\u0643!</div>';
+  }
+
+  function send() {
+    if (!t) { msg.innerHTML = '<span class="err">No ticket number in this link.</span>'; return; }
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    var body = new URLSearchParams();
+    body.append(ENTRY, t);
+    fetch("https://docs.google.com/forms/d/e/" + FORM_ID + "/formResponse",
+          { method: "POST", mode: "no-cors", body: body })
+      .then(function () {
+        try { localStorage.setItem("sp_req_" + t, "1"); } catch (e) {}
+        done();
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = "Try again";
+        msg.innerHTML = '<span class="err">No internet - please try again.</span>';
+      });
+  }
+
+  btn.onclick = send;
+  if (!t) { btn.disabled = true; }
+  else {
+    var already = false;
+    try { already = localStorage.getItem("sp_req_" + t) === "1"; } catch (e) {}
+    if (already) { done(); }
+    else if (AUTO_SUBMIT) { send(); }
+  }
 </script>
 </body>
 </html>
