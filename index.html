@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Parking - Request My Car</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: #f5f7fa; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #141e32; }
+  .card { text-align: center; padding: 32px 24px; max-width: 360px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: .5px; }
+  .sub { color: #6e737d; margin: 0 0 22px; }
+  .token { font-size: 34px; font-weight: 700; margin: 0 0 22px; }
+  a.btn { display: inline-block; background: #009950; color: #fff; text-decoration: none;
+          padding: 14px 28px; border-radius: 6px; font-size: 17px; }
+  .ar { direction: rtl; color: #6e737d; margin-top: 10px; }
+  .foot { margin-top: 34px; font-size: 12px; color: #9aa0a8; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>SMART PARKING</h1>
+  <p class="sub">Opening your car request&hellip;</p>
+  <p class="ar">جاري فتح طلب سيارتك&hellip;</p>
+  <p class="token" id="tok"></p>
+  <a class="btn" id="go" href="#">Request my car</a>
+  <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
+</div>
+<script>
+  // ---- the client's "Request My Car" form (pre-filled link, token goes at the end) ----
+  var FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSf1sBqOsFaHxBPcj7DC06Lr24bgYVz-iT5SZShrSFddoEicDQ/viewform?usp=pp_url&entry.1183704098=";
+
+  var t = (new URLSearchParams(location.search).get("t") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  var target = FORM_BASE + encodeURIComponent(t);
+  document.getElementById("tok").textContent = t;
+  document.getElementById("go").href = target;
+  if (t) { location.replace(target); }   // straight to the form, no extra click
+</script>
+</body>
+</html>
