@@ -9,7 +9,9 @@
          background: #f5f7fa; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #141e32; }
   .card { text-align: center; padding: 32px 24px; max-width: 360px; width: 100%; }
   h1 { font-size: 26px; margin: 0 0 18px; letter-spacing: .5px; }
+  .logo { display: block; margin: 0 auto 14px; filter: drop-shadow(0 4px 8px rgba(48,149,219,.35)); }
   .token { font-size: 40px; font-weight: 700; margin: 0 0 24px; }
+  .tk { font-size: 34px; }
   button { background: #009950; color: #fff; border: 0; padding: 16px 30px; border-radius: 8px;
            font-size: 18px; font-family: inherit; cursor: pointer; width: 100%; max-width: 300px; }
   button:disabled { background: #9aa0a8; }
@@ -22,9 +24,14 @@
 </head>
 <body>
 <div class="card">
+  <svg class="logo" viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+    <rect x="4" y="4" width="92" height="92" rx="20" fill="#3095DB"/>
+    <text x="50" y="72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif"
+          font-size="64" font-weight="700" fill="#fff">P</text>
+  </svg>
   <h1>SMART PARKING</h1>
-  <p class="token" id="tok"></p>
-  <button id="go">Request my car &nbsp;|&nbsp; اطلب سيارتي</button>
+  <p class="token"><span class="tk">&#127903;&#65039;</span> <span id="tok"></span></p>
+  <button id="go">&#128663;&nbsp; Request my car<br><span dir="rtl" style="font-size:16px">اطلب سيارتي</span></button>
   <div class="msg" id="msg"></div>
   <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
 </div>
@@ -42,7 +49,7 @@
 
   function done() {
     btn.disabled = true;
-    btn.textContent = "Requested \u2713";
+    btn.innerHTML = "Requested \u2713";
     msg.innerHTML = '<div class="ok">\u2705 Your car is being prepared!</div>' +
                     '<div class="ok ar">\u2705 \u062c\u0627\u0631\u064a \u062a\u062d\u0636\u064a\u0631 \u0633\u064a\u0627\u0631\u062a\u0643!</div>';
   }
