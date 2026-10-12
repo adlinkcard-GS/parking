@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Smart Parking - Valet VIP</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start;
+         background: #f5f7fa; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #141e32; }
+  .card { width: 100%; max-width: 380px; padding: 22px 20px 28px; text-align: center; }
+  .logo { display: block; margin: 4px auto 8px; filter: drop-shadow(0 4px 8px rgba(48,149,219,.35)); }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .5px; }
+  .sub { color: #636363; font-weight: 600; margin: 2px 0 18px; letter-spacing: 1px; }
+  .screen { display: none; }
+  .big { width: 100%; border: 0; border-radius: 14px; color: #fff; font-family: inherit; font-size: 20px;
+         padding: 22px 10px; margin-bottom: 14px; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+  .big small { display: block; font-size: 14px; opacity: .9; margin-top: 4px; }
+  .blue { background: #3095db; } .grey { background: #636363; } .green { background: #009950; }
+  .big:disabled { background: #9aa0a8; }
+  .display { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 30px;
+             letter-spacing: 8px; padding: 14px; min-height: 64px; margin-bottom: 12px; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .key { background: #fff; border: 0; border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,.08);
+         font-size: 26px; font-weight: 600; color: #141e32; padding: 12px 0; font-family: inherit; }
+  .key:active { background: #e8f2fb; }
+  .key.small { font-size: 17px; color: #6e737d; }
+  .qr { display: inline-block; background: #fff; padding: 14px; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.1); margin: 6px 0 12px; }
+  .qr img { display: block; }
+  .tok { font-size: 34px; font-weight: 700; margin: 4px 0; }
+  .info { font-size: 17px; margin: 6px 0; }
+  .ar { direction: rtl; color: #6e737d; }
+  .err { color: #e11e26; min-height: 22px; font-size: 15px; }
+  .link { background: none; border: 0; color: #3095db; text-decoration: underline; font-size: 14px; margin-top: 18px; font-family: inherit; }
+  .foot { margin-top: 18px; font-size: 12px; color: #9aa0a8; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="card">
+  <svg class="logo" viewBox="0 0 100 100" width="60" height="60" aria-hidden="true">
+    <rect x="4" y="4" width="92" height="92" rx="20" fill="#3095DB"/>
+    <text x="50" y="66" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="46" font-weight="700" fill="#fff" letter-spacing="1">SP</text>
+  </svg>
+  <h1>SMART PARKING</h1>
+  <p class="sub">VALET &middot; VIP</p>
+
+  <!-- PIN (first time on this phone) -->
+  <div class="screen" id="sPin">
+    <p class="info">Valet PIN</p>
+    <div class="display" id="pinDisp"></div>
+    <div class="pad">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key small" data-k="C">Clear</button><button class="key" data-k="0">0</button><button class="key small" data-k="B">&#9003;</button>
+    </div>
+    <button class="big green" id="savePin">Save PIN</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="screen" id="sMain">
+    <button class="big blue" id="bPhone">&#128241;&nbsp; VIP ticket on guest's phone<small>Guest scans the QR on your screen</small></button>
+    <button class="big grey" id="bPrint">&#128424;&#65039;&nbsp; Print at the desk<small>The laptop prints the ticket</small></button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <!-- SHOW QR -->
+  <div class="screen" id="sQr">
+    <p class="info"><b>Guest: scan to get your VIP ticket</b></p>
+    <p class="info ar">امسح الرمز للحصول على تذكرتك</p>
+    <div class="qr" id="qr"></div>
+    <p class="tok" id="qrTok"></p>
+    <button class="big green" id="next1">Next VIP</button>
+  </div>
+
+  <!-- PRINTING -->
+  <div class="screen" id="sPrinted">
+    <p style="font-size:56px;margin:6px 0">&#128424;&#65039;</p>
+    <p class="info">Printing at the desk</p>
+    <p class="tok" id="prTok"></p>
+    <button class="big green" id="next2">Next VIP</button>
+  </div>
+
+  <button class="link" id="chgPin">Change PIN</button>
+  <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
+</div>
+<script>
+  // ---- the client's "Arrival" Google Form + pickup page ----
+  var FORM_ID     = "1FAIpQLSdBnOVN5Ek6RQPG-JFLkQIgb-nX6YDwQWj2rnyYdDZ2PoOlmQ";
+  var ENTRY       = "entry.764557289";
+  var PICKUP_BASE = "https://adlinkcard-gs.github.io/parking/pickup/?t=";
+
+  var ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";     // no 0/O, 1/I confusion
+  var pin = "", typed = "";
+  try { pin = localStorage.getItem("sp_valet_pin") || ""; } catch (e) {}
+
+  function show(id) {
+    ["sPin", "sMain", "sQr", "sPrinted"].forEach(function (s) { document.getElementById(s).style.display = (s === id ? "block" : "none"); });
+    document.getElementById("chgPin").style.display = (id === "sPin" ? "none" : "inline");
+  }
+  function newToken() {
+    var a = new Uint32Array(4), s = "VIP";
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    for (var i = 0; i < 4; i++) s += ALPHA[a[i] % ALPHA.length];
+    return s;
+  }
+
+  // ---------- PIN ----------
+  function pinShow() { document.getElementById("pinDisp").textContent = typed.replace(/./g, "\u25CF") || " "; }
+  document.querySelectorAll(".key").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.getAttribute("data-k");
+      if (k === "B") typed = typed.slice(0, -1);
+      else if (k === "C") typed = "";
+      else if (typed.length < 8) typed += k;
+      pinShow();
+    });
+  });
+  document.getElementById("savePin").onclick = function () {
+    if (typed.length < 4) { document.getElementById("pinDisp").textContent = "min 4 digits"; return; }
+    pin = typed; typed = "";
+    try { localStorage.setItem("sp_valet_pin", pin); } catch (e) {}
+    show("sMain");
+  };
+  document.getElementById("chgPin").onclick = function () { typed = ""; pinShow(); show("sPin"); };
+
+  // ---------- send ----------
+  function send(mode) {
+    var err = document.getElementById("err");
+    var bP = document.getElementById("bPhone"), bR = document.getElementById("bPrint");
+    var tok = newToken();
+    bP.disabled = bR.disabled = true; err.textContent = "Sending...";
+    var body = new URLSearchParams();
+    body.append(ENTRY, "VIP|" + mode + "|" + pin + "|" + tok);
+    fetch("https://docs.google.com/forms/d/e/" + FORM_ID + "/formResponse", { method: "POST", mode: "no-cors", body: body })
+      .then(function () {
+        bP.disabled = bR.disabled = false; err.textContent = "";
+        if (mode === "S") {
+          var q = document.getElementById("qr"); q.innerHTML = "";
+          new QRCode(q, { text: PICKUP_BASE + tok, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M });
+          document.getElementById("qrTok").textContent = tok;
+          show("sQr");
+        } else {
+          document.getElementById("prTok").textContent = tok;
+          show("sPrinted");
+        }
+      })
+      .catch(function () {
+        bP.disabled = bR.disabled = false;
+        err.textContent = "No internet - please try again.";
+      });
+  }
+  document.getElementById("bPhone").onclick = function () { send("S"); };
+  document.getElementById("bPrint").onclick = function () { send("P"); };
+  document.getElementById("next1").onclick = function () { show("sMain"); };
+  document.getElementById("next2").onclick = function () { show("sMain"); };
+
+  if (pin) show("sMain"); else { pinShow(); show("sPin"); }
+</script>
+</body>
+</html>
