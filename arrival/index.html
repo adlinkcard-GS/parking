@@ -68,11 +68,12 @@
 
   <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
 </div>
+<script src="../config.js"></script>
 <script>
-  // ---- the client's "Arrival" Google Form ----
-  var FORM_ID = "1FAIpQLSdBnOVN5Ek6RQPG-JFLkQIgb-nX6YDwQWj2rnyYdDZ2PoOlmQ";
-  var ENTRY   = "entry.764557289";        // the WhatsApp Number question
-  var CC      = "961";                   // default country code (Lebanon)
+  // ---- client settings come from ../config.js ----
+  var FORM_ID = SP_CONFIG.ARRIVAL_FORM_ID;
+  var ENTRY   = SP_CONFIG.ARRIVAL_ENTRY;     // the WhatsApp Number question
+  var CC      = SP_CONFIG.COUNTRY_CODE;      // default country code
 
   var num = CC;
   var disp = document.getElementById("disp"), hint = document.getElementById("hint");
