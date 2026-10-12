@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Smart Parking - Get my ticket</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start;
+         background: #f5f7fa; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #141e32; }
+  .card { width: 100%; max-width: 380px; padding: 22px 20px 28px; text-align: center; }
+  .logo { display: block; margin: 4px auto 10px; filter: drop-shadow(0 4px 8px rgba(48,149,219,.35)); }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: .5px; }
+  .sub { color: #6e737d; margin: 0 0 2px; font-size: 15px; }
+  .ar { direction: rtl; color: #6e737d; margin: 0 0 14px; font-size: 15px; }
+  .display { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+             font-size: 30px; font-weight: 600; letter-spacing: 1px; padding: 14px 10px; min-height: 64px;
+             direction: ltr; margin-bottom: 6px; }
+  .display .ph { color: #c3c7cf; font-weight: 400; }
+  .hint { font-size: 13px; color: #9aa0a8; min-height: 18px; margin-bottom: 12px; }
+  .hint.err { color: #e11e26; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .key { background: #fff; border: 0; border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,.08);
+         font-size: 28px; font-weight: 600; color: #141e32; padding: 14px 0; font-family: inherit; }
+  .key:active { background: #e8f2fb; transform: scale(.97); }
+  .key.small { font-size: 18px; color: #6e737d; }
+  .go { width: 100%; background: #009950; color: #fff; border: 0; border-radius: 12px; padding: 15px 10px;
+        font-size: 19px; font-family: inherit; }
+  .go:disabled { background: #9aa0a8; }
+  .go span { display: block; font-size: 15px; direction: rtl; }
+  .done { display: none; margin-top: 8px; }
+  .done .big { font-size: 56px; }
+  .done p { margin: 6px 0; font-size: 17px; }
+  .ok { color: #009950; font-weight: 600; }
+  .again { margin-top: 18px; background: none; border: 0; color: #3095db; font-size: 14px; text-decoration: underline; font-family: inherit; }
+  .foot { margin-top: 26px; font-size: 12px; color: #9aa0a8; }
+</style>
+</head>
+<body>
+<div class="card">
+  <svg class="logo" viewBox="0 0 100 100" width="70" height="70" aria-hidden="true">
+    <rect x="4" y="4" width="92" height="92" rx="20" fill="#3095DB"/>
+    <text x="50" y="72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" fill="#fff">P</text>
+  </svg>
+  <h1>SMART PARKING</h1>
+
+  <div id="entry">
+    <p class="sub">Your WhatsApp number</p>
+    <p class="ar">رقم الواتساب الخاص بك</p>
+    <div class="display" id="disp"></div>
+    <div class="hint" id="hint">Country code 961 is already there</div>
+    <div class="pad">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key small" data-k="C">Clear</button><button class="key" data-k="0">0</button><button class="key small" data-k="B">&#9003;</button>
+    </div>
+    <button class="go" id="go">&#127915;&nbsp; Get my ticket<span>احصل على تذكرتي</span></button>
+  </div>
+
+  <div class="done" id="done">
+    <div class="big">&#9989;</div>
+    <p class="ok">Your ticket is on its way to WhatsApp!</p>
+    <p class="ok" dir="rtl">تذكرتك في الطريق إلى الواتساب!</p>
+    <p style="color:#6e737d;font-size:15px" id="sentTo"></p>
+    <button class="again" id="again">Wrong number? Send again</button>
+  </div>
+
+  <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
+</div>
+<script>
+  // ---- the client's "Arrival" Google Form ----
+  var FORM_ID = "1FAIpQLSdBnOVN5Ek6RQPG-JFLkQIgb-nX6YDwQWj2rnyYdDZ2PoOlmQ";
+  var ENTRY   = "entry.764557289";        // the WhatsApp Number question
+  var CC      = "961";                   // default country code (Lebanon)
+
+  var num = CC;
+  var disp = document.getElementById("disp"), hint = document.getElementById("hint");
+  var go = document.getElementById("go");
+
+  function pretty(n) {                    // 96171605252 -> 961 71 605 252
+    if (n.indexOf(CC) === 0 && n.length > CC.length) {
+      var r = n.slice(CC.length), parts = [];
+      if (r.length > 2) { parts.push(r.slice(0, 2)); r = r.slice(2); }
+      while (r.length > 3) { parts.push(r.slice(0, 3)); r = r.slice(3); }
+      if (r) parts.push(r);
+      return CC + " " + parts.join(" ");
+    }
+    return n;
+  }
+  function show(msg, err) {
+    disp.innerHTML = num ? pretty(num) : '<span class="ph">961 ...</span>';
+    if (msg !== undefined) { hint.textContent = msg; hint.className = err ? "hint err" : "hint"; }
+  }
+  // clean + check: returns the final number or "" if not valid
+  function finalNumber() {
+    var n = num.replace(/\D/g, "");
+    if (n.indexOf(CC + "0") === 0) n = CC + n.slice(CC.length + 1);   // 961 03... -> 961 3...
+    if (n.indexOf(CC) !== 0 && n.length <= 8) n = CC + n.replace(/^0/, "");  // local number typed
+    if (n.length < 10 || n.length > 15) return "";
+    return n;
+  }
+
+  document.querySelectorAll(".key").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.getAttribute("data-k");
+      if (k === "B") num = num.slice(0, -1);
+      else if (k === "C") num = "";
+      else if (num.length < 15) num += k;
+      show("");
+    });
+  });
+
+  go.addEventListener("click", function () {
+    var n = finalNumber();
+    if (!n) { show("Please check the number (with country code)", true); return; }
+    go.disabled = true;
+    go.firstChild.nodeValue = "Sending... ";
+    var body = new URLSearchParams();
+    body.append(ENTRY, n);
+    fetch("https://docs.google.com/forms/d/e/" + FORM_ID + "/formResponse", { method: "POST", mode: "no-cors", body: body })
+      .then(function () {
+        try { localStorage.setItem("sp_arr", JSON.stringify({ n: n, t: Date.now() })); } catch (e) {}
+        done(n);
+      })
+      .catch(function () {
+        go.disabled = false;
+        go.firstChild.nodeValue = "\uD83C\uDFAB\u00A0 Get my ticket";
+        show("No internet - please try again", true);
+      });
+  });
+
+  function done(n) {
+    document.getElementById("entry").style.display = "none";
+    document.getElementById("done").style.display = "block";
+    document.getElementById("sentTo").textContent = "+" + pretty(n);
+  }
+  document.getElementById("again").addEventListener("click", function () {
+    try { localStorage.removeItem("sp_arr"); } catch (e) {}
+    location.reload();
+  });
+
+  // already sent from this phone in the last 15 minutes? -> show "on its way"
+  try {
+    var last = JSON.parse(localStorage.getItem("sp_arr") || "null");
+    if (last && Date.now() - last.t < 15 * 60 * 1000) done(last.n);
+  } catch (e) {}
+  show();
+</script>
+</body>
+</html>
