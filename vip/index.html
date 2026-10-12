@@ -85,11 +85,13 @@
   <button class="link" id="chgPin">Change PIN</button>
   <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
 </div>
+<script src="../config.js"></script>
 <script>
-  // ---- the client's "Arrival" Google Form + pickup page ----
-  var FORM_ID     = "1FAIpQLSdBnOVN5Ek6RQPG-JFLkQIgb-nX6YDwQWj2rnyYdDZ2PoOlmQ";
-  var ENTRY       = "entry.764557289";
-  var PICKUP_BASE = "https://adlinkcard-gs.github.io/parking/pickup/?t=";
+  // ---- client settings come from ../config.js ----
+  var FORM_ID     = SP_CONFIG.ARRIVAL_FORM_ID;
+  var ENTRY       = SP_CONFIG.ARRIVAL_ENTRY;
+  // the pickup page next door, whatever the repo is called
+  var PICKUP_BASE = location.origin + location.pathname.replace(/vip\/(index\.html)?$/, "") + "pickup/?t=";
 
   var ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";     // no 0/O, 1/I confusion
   var pin = "", typed = "";
