@@ -48,13 +48,12 @@
   <div class="msg" id="msg"></div>
   <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
 </div>
+<script src="../config.js"></script>
 <script>
-  // ---- the client's "Request My Car" Google Form ----
-  var FORM_ID  = "1FAIpQLSf1sBqOsFaHxBPcj7DC06Lr24bgYVz-iT5SZShrSFddoEicDQ";
-  var ENTRY    = "entry.1183704098";          // the Token Number question
-  // false = one tap on the button (safe: no request by mistake)
-  // true  = request is sent the moment the link is opened
-  var AUTO_SUBMIT = false;
+  // ---- client settings come from ../config.js ----
+  var FORM_ID  = SP_CONFIG.REQUEST_FORM_ID;
+  var ENTRY    = SP_CONFIG.REQUEST_ENTRY;     // the Token Number question
+  var AUTO_SUBMIT = SP_CONFIG.AUTO_SUBMIT === true;
 
   var t = (new URLSearchParams(location.search).get("t") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
   var btn = document.getElementById("go"), msg = document.getElementById("msg");
