@@ -3,136 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Smart Parking - Request My Car</title>
-<style>
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-         background: #f5f7fa; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #141e32; }
-  .card { text-align: center; padding: 32px 24px; max-width: 360px; width: 100%; }
-  h1 { font-size: 26px; margin: 0 0 18px; letter-spacing: .5px; }
-  .logo { display: block; margin: 0 auto 14px; filter: drop-shadow(0 4px 8px rgba(48,149,219,.35)); }
-  .token { font-size: 40px; font-weight: 700; margin: 0 0 24px; }
-  .tk { font-size: 34px; }
-  button { background: #009950; color: #fff; border: 0; padding: 16px 30px; border-radius: 8px;
-           font-size: 18px; font-family: inherit; cursor: pointer; width: 100%; max-width: 300px; }
-  button:disabled { background: #9aa0a8; }
-  .msg { margin-top: 20px; font-size: 18px; min-height: 52px; }
-  .ok { color: #009950; font-weight: 600; }
-  .err { color: #e11e26; }
-  .ar { direction: rtl; }
-  .foot { margin-top: 34px; font-size: 12px; color: #9aa0a8; }
-  #vip { display: none; margin-bottom: 18px; }
-  .qr { display: inline-block; background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 14px; }
-  .qr img { display: block; }
-  button.sec { background: #3095db; margin-bottom: 6px; }
-  .hint { font-size: 13px; color: #6e737d; margin: 6px 0 0; }
-  #saved { display: none; width: 100%; max-width: 300px; margin-top: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-</style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-</head>
-<body>
-<div class="card">
-  <svg class="logo" viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
-    <rect x="4" y="4" width="92" height="92" rx="20" fill="#3095DB"/>
-    <text x="50" y="66" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif"
-          font-size="46" font-weight="700" fill="#fff" letter-spacing="1">SP</text>
-  </svg>
-  <h1>SMART PARKING</h1>
-  <p class="token"><span class="tk">&#127903;&#65039;</span> <span id="tok"></span></p>
-  <div id="vip">
-    <div class="qr" id="qr"></div>
-    <button class="sec" id="save">&#128190;&nbsp; Save ticket to my phone<br><span dir="rtl" style="font-size:15px">احفظ التذكرة على هاتفي</span></button>
-    <p class="hint" id="saveHint">Keep it: show it to the valet when you leave.</p>
-    <img id="saved" alt="VIP ticket">
-  </div>
-  <button id="go">&#128663;&nbsp; Request my car<br><span dir="rtl" style="font-size:16px">اطلب سيارتي</span></button>
-  <div class="msg" id="msg"></div>
-  <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
-</div>
+<title>Smart Parking</title>
 <script>
-  // ---- the client's "Request My Car" Google Form ----
-  var FORM_ID  = "1FAIpQLSf1sBqOsFaHxBPcj7DC06Lr24bgYVz-iT5SZShrSFddoEicDQ";
-  var ENTRY    = "entry.1183704098";          // the Token Number question
-  // false = one tap on the button (safe: no request by mistake)
-  // true  = request is sent the moment the link is opened
-  var AUTO_SUBMIT = false;
-
-  var t = (new URLSearchParams(location.search).get("t") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
-  var btn = document.getElementById("go"), msg = document.getElementById("msg");
-  document.getElementById("tok").textContent = t;
-
-  function done() {
-    btn.disabled = true;
-    btn.innerHTML = "Requested \u2713";
-    msg.innerHTML = '<div class="ok">\u2705 Your car is being prepared!</div>' +
-                    '<div class="ok ar">\u2705 \u062c\u0627\u0631\u064a \u062a\u062d\u0636\u064a\u0631 \u0633\u064a\u0627\u0631\u062a\u0643!</div>';
-  }
-
-  function send() {
-    if (!t) { msg.innerHTML = '<span class="err">No ticket number in this link.</span>'; return; }
-    btn.disabled = true;
-    btn.textContent = "Sending...";
-    var body = new URLSearchParams();
-    body.append(ENTRY, t);
-    fetch("https://docs.google.com/forms/d/e/" + FORM_ID + "/formResponse",
-          { method: "POST", mode: "no-cors", body: body })
-      .then(function () {
-        try { localStorage.setItem("sp_req_" + t, "1"); } catch (e) {}
-        done();
-      })
-      .catch(function () {
-        btn.disabled = false;
-        btn.textContent = "Try again";
-        msg.innerHTML = '<span class="err">No internet - please try again.</span>';
-      });
-  }
-
-  // ---------- VIP ticket: QR + "save to my phone" ----------
-  var isVip = t.indexOf("VIP") === 0;
-  var selfUrl = location.origin + location.pathname + "?t=" + t;
-  if (isVip && window.QRCode) {
-    document.getElementById("vip").style.display = "block";
-    new QRCode(document.getElementById("qr"), { text: selfUrl, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
-  }
-  function rr(c, x, y, w, h, r) {
-    c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
-    c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h);
-    c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
-  }
-  document.getElementById("save").onclick = function () {
-    var src = document.querySelector("#qr canvas");
-    if (!src) return;
-    var W = 600, H = 960, cv = document.createElement("canvas"), c = cv.getContext("2d");
-    cv.width = W; cv.height = H;
-    c.fillStyle = "#f5f7fa"; c.fillRect(0, 0, W, H);
-    c.fillStyle = "#ffffff"; rr(c, 30, 30, W - 60, H - 60, 28); c.fill();
-    c.fillStyle = "#3095DB"; rr(c, W / 2 - 50, 70, 100, 100, 22); c.fill();
-    c.fillStyle = "#ffffff"; c.font = "bold 50px Segoe UI, Arial, sans-serif"; c.textAlign = "center"; c.fillText("SP", W / 2, 138);
-    c.fillStyle = "#141e32"; c.font = "bold 34px Segoe UI, Arial, sans-serif"; c.fillText("SMART PARKING", W / 2, 230);
-    c.fillStyle = "#636363"; c.font = "bold 26px Segoe UI, Arial, sans-serif"; c.fillText("\u2605  VIP  \u2605", W / 2, 275);
-    c.fillStyle = "#141e32"; c.font = "bold 64px Segoe UI, Arial, sans-serif"; c.fillText(t, W / 2, 360);
-    c.drawImage(src, W / 2 - 160, 395, 320, 320);
-    c.fillStyle = "#141e32"; c.font = "24px Segoe UI, Arial, sans-serif";
-    c.fillText("Scan to request your car", W / 2, 765);
-    c.direction = "rtl"; c.fillText("\u0627\u0645\u0633\u062d \u0627\u0644\u0631\u0645\u0632 \u0644\u0637\u0644\u0628 \u0633\u064a\u0627\u0631\u062a\u0643", W / 2, 805); c.direction = "ltr";
-    var d = new Date(), pad = function (n) { return (n < 10 ? "0" : "") + n; };
-    c.fillStyle = "#6e737d"; c.font = "20px Segoe UI, Arial, sans-serif";
-    c.fillText(pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + "  " + pad(d.getHours()) + ":" + pad(d.getMinutes()), W / 2, 850);
-    c.fillStyle = "#9aa0a8"; c.font = "italic 18px Segoe UI, Arial, sans-serif"; c.fillText("ADLINKCARD \u00B7 Grow Smarter", W / 2, 895);
-    var url = cv.toDataURL("image/png");
-    var a = document.createElement("a"); a.href = url; a.download = "SmartParking-" + t + ".png";
-    document.body.appendChild(a); a.click(); a.remove();
-    var im = document.getElementById("saved"); im.src = url; im.style.display = "block";
-    document.getElementById("saveHint").textContent = "Saved. If not: press and hold the picture below, then Save.";
-  };
-
-  btn.onclick = send;
-  if (!t) { btn.disabled = true; }
-  else {
-    var already = false;
-    try { already = localStorage.getItem("sp_req_" + t) === "1"; } catch (e) {}
-    if (already) { done(); }
-    else if (AUTO_SUBMIT) { send(); }
-  }
+  // old links (.../parking/?t=SP0016) keep working: go to the pickup page
+  location.replace("pickup/" + location.search);
 </script>
+</head>
+<body style="font-family:Segoe UI,Arial,sans-serif;text-align:center;padding-top:80px;color:#141e32">
+  <p>Opening Smart Parking&hellip;</p>
+  <p><a href="pickup/">Continue</a></p>
 </body>
 </html>
