@@ -20,7 +20,14 @@
   .err { color: #e11e26; }
   .ar { direction: rtl; }
   .foot { margin-top: 34px; font-size: 12px; color: #9aa0a8; }
+  #vip { display: none; margin-bottom: 18px; }
+  .qr { display: inline-block; background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 14px; }
+  .qr img { display: block; }
+  button.sec { background: #3095db; margin-bottom: 6px; }
+  .hint { font-size: 13px; color: #6e737d; margin: 6px 0 0; }
+  #saved { display: none; width: 100%; max-width: 300px; margin-top: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="card">
@@ -31,6 +38,12 @@
   </svg>
   <h1>SMART PARKING</h1>
   <p class="token"><span class="tk">&#127903;&#65039;</span> <span id="tok"></span></p>
+  <div id="vip">
+    <div class="qr" id="qr"></div>
+    <button class="sec" id="save">&#128190;&nbsp; Save ticket to my phone<br><span dir="rtl" style="font-size:15px">احفظ التذكرة على هاتفي</span></button>
+    <p class="hint" id="saveHint">Keep it: show it to the valet when you leave.</p>
+    <img id="saved" alt="VIP ticket">
+  </div>
   <button id="go">&#128663;&nbsp; Request my car<br><span dir="rtl" style="font-size:16px">اطلب سيارتي</span></button>
   <div class="msg" id="msg"></div>
   <p class="foot">ADLINKCARD &middot; Grow Smarter</p>
@@ -72,6 +85,45 @@
         msg.innerHTML = '<span class="err">No internet - please try again.</span>';
       });
   }
+
+  // ---------- VIP ticket: QR + "save to my phone" ----------
+  var isVip = t.indexOf("VIP") === 0;
+  var selfUrl = location.origin + location.pathname + "?t=" + t;
+  if (isVip && window.QRCode) {
+    document.getElementById("vip").style.display = "block";
+    new QRCode(document.getElementById("qr"), { text: selfUrl, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+  }
+  function rr(c, x, y, w, h, r) {
+    c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
+  }
+  document.getElementById("save").onclick = function () {
+    var src = document.querySelector("#qr canvas");
+    if (!src) return;
+    var W = 600, H = 960, cv = document.createElement("canvas"), c = cv.getContext("2d");
+    cv.width = W; cv.height = H;
+    c.fillStyle = "#f5f7fa"; c.fillRect(0, 0, W, H);
+    c.fillStyle = "#ffffff"; rr(c, 30, 30, W - 60, H - 60, 28); c.fill();
+    c.fillStyle = "#3095DB"; rr(c, W / 2 - 50, 70, 100, 100, 22); c.fill();
+    c.fillStyle = "#ffffff"; c.font = "bold 50px Segoe UI, Arial, sans-serif"; c.textAlign = "center"; c.fillText("SP", W / 2, 138);
+    c.fillStyle = "#141e32"; c.font = "bold 34px Segoe UI, Arial, sans-serif"; c.fillText("SMART PARKING", W / 2, 230);
+    c.fillStyle = "#636363"; c.font = "bold 26px Segoe UI, Arial, sans-serif"; c.fillText("\u2605  VIP  \u2605", W / 2, 275);
+    c.fillStyle = "#141e32"; c.font = "bold 64px Segoe UI, Arial, sans-serif"; c.fillText(t, W / 2, 360);
+    c.drawImage(src, W / 2 - 160, 395, 320, 320);
+    c.fillStyle = "#141e32"; c.font = "24px Segoe UI, Arial, sans-serif";
+    c.fillText("Scan to request your car", W / 2, 765);
+    c.direction = "rtl"; c.fillText("\u0627\u0645\u0633\u062d \u0627\u0644\u0631\u0645\u0632 \u0644\u0637\u0644\u0628 \u0633\u064a\u0627\u0631\u062a\u0643", W / 2, 805); c.direction = "ltr";
+    var d = new Date(), pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    c.fillStyle = "#6e737d"; c.font = "20px Segoe UI, Arial, sans-serif";
+    c.fillText(pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + "  " + pad(d.getHours()) + ":" + pad(d.getMinutes()), W / 2, 850);
+    c.fillStyle = "#9aa0a8"; c.font = "italic 18px Segoe UI, Arial, sans-serif"; c.fillText("ADLINKCARD \u00B7 Grow Smarter", W / 2, 895);
+    var url = cv.toDataURL("image/png");
+    var a = document.createElement("a"); a.href = url; a.download = "SmartParking-" + t + ".png";
+    document.body.appendChild(a); a.click(); a.remove();
+    var im = document.getElementById("saved"); im.src = url; im.style.display = "block";
+    document.getElementById("saveHint").textContent = "Saved. If not: press and hold the picture below, then Save.";
+  };
 
   btn.onclick = send;
   if (!t) { btn.disabled = true; }
