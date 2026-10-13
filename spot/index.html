@@ -40,6 +40,20 @@
   .err { color: #e11e26; min-height: 20px; font-size: 15px; }
   .gear { background: none; border: 0; padding: 6px; }
   .foot { margin-top: 16px; font-size: 12px; color: #9aa0a8; }
+  .cars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 14px; }
+  .carBtn { border: 3px solid #3095db; background: #fff; border-radius: 18px; min-height: 120px; padding: 10px 6px;
+            font-family: inherit; color: #141e32; box-shadow: 0 3px 10px rgba(0,0,0,.12);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .carBtn:active { transform: scale(.97); }
+  .carBtn .no { font-size: 46px; font-weight: 800; line-height: 1; }
+  .carBtn .mins { font-size: 15px; color: #636363; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .carBtn.mine { border-color: #f39c12; background: #fff4e0; }
+  .carBtn.new { animation: pop 1s ease-in-out 3; }
+  @keyframes pop { 50% { transform: scale(1.06); background: #e8f2fb; } }
+  .empty { padding: 30px 0 20px; opacity: .35; }
+  .net { display: none; margin: 0 auto 10px; }
+  .kbd { background: #dfe3e8; border: 0; border-radius: 14px; padding: 12px 22px; }
+  .flash { border-radius: 24px; padding: 30px 10px; background: #e11e26; }
 </style>
 </head>
 <body>
@@ -63,6 +77,29 @@
     <div class="pad" id="setPad"></div>
     <div class="err" id="setErr"></div>
     <button class="big" id="setSave">Next</button>
+  </div>
+
+  <!-- HOME: live list of cars waiting for a valet -->
+  <div class="screen" id="sHome">
+    <svg class="net" id="netOff" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#e11e26" stroke-width="2.5" stroke-linecap="round" aria-label="No connection" role="img"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="#e11e26"/><path d="M3 3l18 18"/></svg>
+    <div class="cars" id="mineList"></div>
+    <div class="cars" id="carList"></div>
+    <div class="empty" id="empty">
+      <svg viewBox="0 0 64 40" width="140" height="88" aria-hidden="true">
+        <path d="M8 26 L14 12 Q16 8 21 8 H43 Q48 8 50 12 L56 26 Q60 27 60 31 V34 H4 V31 Q4 27 8 26 Z" fill="#9aa0a8"/>
+        <circle cx="16" cy="34" r="6" fill="#636363"/><circle cx="48" cy="34" r="6" fill="#636363"/>
+      </svg>
+    </div>
+    <button class="kbd" id="toKeypad" aria-label="Type a car number">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#141e32" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 16h8"/></svg>
+    </button>
+  </div>
+
+  <!-- TAKEN by another valet -->
+  <div class="screen" id="sTaken">
+    <div class="flash">
+      <svg viewBox="0 0 24 24" width="120" height="120" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </div>
   </div>
 
   <!-- 1. CAR NUMBER -->
@@ -131,22 +168,51 @@
 <script src="../config.js"></script>
 <script>
   // ---- client settings come from ../config.js ----
-  var FORM_ID = SP_CONFIG.ARRIVAL_FORM_ID;
-  var ENTRY   = SP_CONFIG.ARRIVAL_ENTRY;
-  var SPOTS   = SP_CONFIG.SPOTS || { zones: [], number: true };
-  var ZONES   = SPOTS.zones || [];
-  var NEED_NO = SPOTS.number !== false;
+  var FORM_ID  = SP_CONFIG.ARRIVAL_FORM_ID;
+  var ENTRY    = SP_CONFIG.ARRIVAL_ENTRY;
+  var SPOTS    = SP_CONFIG.SPOTS || { zones: [], number: true };
+  var ZONES    = SPOTS.zones || [];
+  var NEED_NO  = SPOTS.number !== false;
+  var FEED     = SP_CONFIG.FEED_URL || "";
+  var FEED_KEY = SP_CONFIG.FEED_KEY || "";
+  var POLL_MS  = 7000;
 
   var pin = "", vphone = "";
   try { pin = localStorage.getItem("sp_valet_pin") || ""; vphone = localStorage.getItem("sp_valet_phone") || ""; } catch (e) {}
 
-  var car = "", zone = "", spot = "", lastSend = null;
+  var params = new URLSearchParams(location.search);
+  var startTok = (params.get("t") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");   // from the VIP page
+
+  var car = "", token = "", zone = "", spot = "", claimed = false, lastSend = null;
+  var seen = {}, firstPoll = true, current = "";
   function $(id) { return document.getElementById(id); }
   function show(id) {
-    ["sSetup", "sCar", "sZone", "sSpot", "sDone"].forEach(function (s) { $(s).style.display = (s === id ? "block" : "none"); });
-    $("gear").style.visibility = (id === "sCar" ? "visible" : "hidden");
+    current = id;
+    ["sSetup", "sHome", "sTaken", "sCar", "sZone", "sSpot", "sDone"].forEach(function (s) { $(s).style.display = (s === id ? "block" : "none"); });
+    $("gear").style.visibility = (id === "sHome" || (id === "sCar" && !FEED) ? "visible" : "hidden");
   }
   function buzz(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+
+  // little beep for a new car (sound is allowed after the first tap)
+  var actx = null;
+  document.addEventListener("click", function () {
+    try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch (e) {}
+  });
+  function beep() {
+    try {
+      if (!actx) return;
+      [0, 0.25].forEach(function (d) {
+        var o = actx.createOscillator(), g = actx.createGain();
+        o.frequency.value = 1100; o.connect(g); g.connect(actx.destination);
+        g.gain.setValueAtTime(0.25, actx.currentTime + d);
+        o.start(actx.currentTime + d); o.stop(actx.currentTime + d + 0.15);
+      });
+    } catch (e) {}
+  }
+
+  // keep the screen awake while the page is open
+  var wake = null;
+  function keepAwake() { try { if ("wakeLock" in navigator && !wake) navigator.wakeLock.request("screen").then(function (w) { wake = w; w.addEventListener("release", function () { wake = null; }); }); } catch (e) {} }
 
   // number pads (1-9, 0, backspace)
   function makePad(box, onKey) {
@@ -182,31 +248,93 @@
     if (setVal.length < 8) { $("setErr").textContent = "Number too short"; return; }
     vphone = setVal;
     try { localStorage.setItem("sp_valet_pin", pin); localStorage.setItem("sp_valet_phone", vphone); } catch (e) {}
-    startCar();
+    begin();
   };
   $("gear").onclick = function () { setStep = 0; setVal = ""; $("setErr").textContent = ""; setupShow(); show("sSetup"); };
 
-  // ---------- 1. CAR ----------
-  function startCar() {
-    car = ""; zone = ""; spot = "";
+  // ---------- HOME: live feed ----------
+  function home() {
+    car = ""; token = ""; zone = ""; spot = ""; claimed = false;
     $("who").textContent = vphone ? "\u2022\u2022\u2022 " + vphone.slice(-4) : "";
-    carShow(); show("sCar");
+    if (!FEED) { carShow(); show("sCar"); return; }
+    show("sHome"); poll();
   }
+  function feedUrl(extra) {
+    return FEED + "?k=" + encodeURIComponent(FEED_KEY) + "&p=" + encodeURIComponent(pin) +
+           "&v=" + encodeURIComponent(vphone) + (extra || "") + "&_=" + Date.now();
+  }
+  function shortNo(t) { return String(parseInt(t.replace(/\D/g, ""), 10) || t); }
+  function carButton(c, mine) {
+    var b = document.createElement("button");
+    b.className = "carBtn" + (mine ? " mine" : "") + (!mine && !seen[c.t] && !firstPoll ? " new" : "");
+    b.setAttribute("aria-label", "Car " + c.t);
+    var n = document.createElement("div"); n.className = "no"; n.textContent = shortNo(c.t);
+    var m = document.createElement("div"); m.className = "mins";
+    m.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#636363" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    m.appendChild(document.createTextNode(c.m + "'"));
+    b.appendChild(n); b.appendChild(m);
+    b.onclick = function () { buzz(25); mine ? park(c.t, true) : take(c.t); };
+    return b;
+  }
+  var polling = false;
+  function poll() {
+    if (!FEED || polling) return;
+    polling = true;
+    fetch(feedUrl(""), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+      polling = false;
+      $("netOff").style.display = "none";
+      if (!d.ok) { if (d.err === "pin") $("gear").click(); return; }
+      var isNew = false;
+      d.cars.forEach(function (c) { if (!seen[c.t] && !firstPoll) isNew = true; });
+      if (current === "sHome") {
+        var ml = $("mineList"), cl = $("carList");
+        ml.innerHTML = ""; cl.innerHTML = "";
+        d.mine.forEach(function (c) { ml.appendChild(carButton(c, true)); });
+        d.cars.forEach(function (c) { cl.appendChild(carButton(c, false)); });
+        $("empty").style.display = (d.mine.length || d.cars.length) ? "none" : "block";
+      }
+      d.cars.forEach(function (c) { seen[c.t] = true; });
+      if (isNew) { beep(); buzz([200, 100, 200]); }
+      firstPoll = false;
+    }).catch(function () { polling = false; $("netOff").style.display = "block"; });
+  }
+  setInterval(function () { if (current === "sHome" && document.visibilityState === "visible") poll(); }, POLL_MS);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { keepAwake(); if (current === "sHome") poll(); } });
+  $("toKeypad").onclick = function () { car = ""; carShow(); show("sCar"); };
+
+  // tap a waiting car: first tap wins
+  function take(t) {
+    fetch(feedUrl("&a=claim&t=" + encodeURIComponent(t)), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) park(t, true);
+      else { buzz([300, 100, 300]); show("sTaken"); setTimeout(home, 1800); }
+    }).catch(function () { buzz([300, 100, 300]); $("netOff").style.display = "block"; });
+  }
+  function release() {
+    if (FEED && claimed && token) fetch(feedUrl("&a=release&t=" + encodeURIComponent(token)), { cache: "no-store" }).catch(function () {});
+  }
+
+  // ---------- after choosing a car: zone -> spot -> save ----------
+  function park(t, isClaim) {
+    token = t; claimed = !!isClaim; zone = ""; spot = "";
+    if (ZONES.length) show("sZone");
+    else if (NEED_NO) startSpot();
+    else save();
+  }
+
+  // ---------- CAR KEYPAD (when no feed, or a car typed by hand) ----------
   function carShow() { $("carDisp").textContent = car; $("carGo").disabled = car === ""; }
   makePad($("carPad"), function (k) {
     if (k === "B") car = car.slice(0, -1);
     else if (car.length < 5 && !(car === "" && k === "0")) car += k;
     carShow();
   });
-  $("carBack").onclick = function () { car = ""; carShow(); };
+  $("carBack").onclick = function () { if (FEED) home(); else { car = ""; carShow(); } };
   $("carGo").onclick = function () {
     if (!car) return;
-    if (ZONES.length) show("sZone");
-    else if (NEED_NO) startSpot();
-    else save();
+    park("SP" + (car.length < 4 ? ("0000" + car).slice(-4) : car), false);
   };
 
-  // ---------- 2. ZONE ----------
+  // ---------- ZONE ----------
   function textOn(hex) {
     var c = String(hex).replace("#", ""); if (c.length === 3) c = c.replace(/./g, "$&$&");
     var r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
@@ -220,9 +348,10 @@
     $("zones").appendChild(b);
   });
   if (ZONES.length === 1) $("zones").style.gridTemplateColumns = "1fr";
-  $("zoneBack").onclick = function () { show("sCar"); };
+  // back from the first step: give the car back to the others
+  $("zoneBack").onclick = function () { release(); home(); };
 
-  // ---------- 3. SPOT ----------
+  // ---------- SPOT ----------
   function startSpot() { spot = ""; $("spotPre").textContent = zone ? zone + "-" : ""; spotShow(); show("sSpot"); }
   function spotShow() { $("spotDisp").textContent = spot; $("spotGo").disabled = spot === ""; }
   makePad($("spotPad"), function (k) {
@@ -230,13 +359,12 @@
     else if (spot.length < 4) spot += k;
     spotShow();
   });
-  $("spotBack").onclick = function () { if (ZONES.length) show("sZone"); else show("sCar"); };
+  $("spotBack").onclick = function () { if (ZONES.length) show("sZone"); else { release(); home(); } };
   $("spotGo").onclick = function () { if (spot) save(); };
 
   // ---------- SAVE ----------
   function clean(s) { return String(s).replace(/\|/g, "/").trim(); }
   function save() {
-    var token = "SP" + (car.length < 4 ? ("0000" + car).slice(-4) : car);
     var where = clean(zone && spot ? zone + "-" + spot : (zone || spot));
     lastSend = { token: token, where: where };
     send();
@@ -251,7 +379,7 @@
       .then(function () {
         $("doneSum").textContent = t.token + (t.where ? "  \u2192  " + t.where : "");
         buzz([80, 60, 80]);
-        setTimeout(startCar, 2500);
+        setTimeout(home, 2500);
       })
       .catch(function () {
         $("doneBox").className = "done bad"; $("icoOk").style.display = "none"; $("icoBad").style.display = "inline";
@@ -262,7 +390,12 @@
   $("retry").onclick = send;
 
   // ---------- start ----------
-  if (pin && vphone) startCar(); else { setStep = 0; setVal = ""; setupShow(); show("sSetup"); }
+  function begin() {
+    keepAwake();
+    if (startTok) { var t = startTok; startTok = ""; history.replaceState(null, "", location.pathname); $("who").textContent = vphone ? "\u2022\u2022\u2022 " + vphone.slice(-4) : ""; park(t, false); }
+    else home();
+  }
+  if (pin && vphone) begin(); else { setStep = 0; setVal = ""; setupShow(); show("sSetup"); }
 </script>
 </body>
 </html>
