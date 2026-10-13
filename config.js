@@ -15,6 +15,13 @@ var SP_CONFIG = {
   COUNTRY_CODE:    "961",    // default country code on the keypad
   AUTO_SUBMIT:     false,    // false = guest taps "Request my car" (safe)
 
+  // ---- live valet feed (new cars pop up on the valet phones) ----
+  //  FEED_URL: the Feed's /exec link (the same for every client)
+  //  FEED_KEY: this client's sheet ID (shown by addClient in the Feed)
+  //  leave FEED_URL empty = valets type the car number instead
+  FEED_URL: "https://script.google.com/macros/s/AKfycbwEZCN0q3vOfHW5SEeE4QiU4hMGtzzpgnNVofbqPOETD5NQ_XwUMkPBZjJHFGhkfA/exec",
+  FEED_KEY: "1LqItDtz8Vj29C6Cq-ZzyynLX89S_nCxXjdfSL1wVW70",
+
   // ---- valet spot page (/spot/) : this parking's own layout ----
   //  zones:  [] = no zones, or a list of big colored buttons
   //  number: true = valet also taps a spot number, false = no number
