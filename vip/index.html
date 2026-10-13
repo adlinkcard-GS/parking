@@ -33,6 +33,7 @@
   .err { color: #e11e26; min-height: 22px; font-size: 15px; }
   .link { background: none; border: 0; color: #3095db; text-decoration: underline; font-size: 14px; margin-top: 18px; font-family: inherit; }
   .foot { margin-top: 18px; font-size: 12px; color: #9aa0a8; }
+  .park { background: #141e32; display: flex; align-items: center; justify-content: center; padding: 14px 10px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -71,6 +72,7 @@
     <p class="info ar">امسح الرمز للحصول على تذكرتك</p>
     <div class="qr" id="qr"></div>
     <p class="tok" id="qrTok"></p>
+    <button class="big park" id="park1" aria-label="Park this car"><svg viewBox="0 0 64 40" width="70" height="44" aria-hidden="true"><path d="M8 26 L14 12 Q16 8 21 8 H43 Q48 8 50 12 L56 26 Q60 27 60 31 V34 H4 V31 Q4 27 8 26 Z" fill="#fff"/><circle cx="16" cy="34" r="6" fill="#141e32"/><circle cx="48" cy="34" r="6" fill="#141e32"/></svg>&nbsp;<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>&nbsp;<b style="font-size:40px">P</b></button>
     <button class="big green" id="next1">Next VIP</button>
   </div>
 
@@ -79,6 +81,7 @@
     <p style="font-size:56px;margin:6px 0">&#128424;&#65039;</p>
     <p class="info">Printing at the desk</p>
     <p class="tok" id="prTok"></p>
+    <button class="big park" id="park2" aria-label="Park this car"><svg viewBox="0 0 64 40" width="70" height="44" aria-hidden="true"><path d="M8 26 L14 12 Q16 8 21 8 H43 Q48 8 50 12 L56 26 Q60 27 60 31 V34 H4 V31 Q4 27 8 26 Z" fill="#fff"/><circle cx="16" cy="34" r="6" fill="#141e32"/><circle cx="48" cy="34" r="6" fill="#141e32"/></svg>&nbsp;<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>&nbsp;<b style="font-size:40px">P</b></button>
     <button class="big green" id="next2">Next VIP</button>
   </div>
 
@@ -138,6 +141,7 @@
     fetch("https://docs.google.com/forms/d/e/" + FORM_ID + "/formResponse", { method: "POST", mode: "no-cors", body: body })
       .then(function () {
         bP.disabled = bR.disabled = false; err.textContent = "";
+        lastTok = tok;
         if (mode === "S") {
           var q = document.getElementById("qr"); q.innerHTML = "";
           new QRCode(q, { text: PICKUP_BASE + tok, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M });
@@ -155,6 +159,11 @@
   }
   document.getElementById("bPhone").onclick = function () { send("S"); };
   document.getElementById("bPrint").onclick = function () { send("P"); };
+  // valet parks the VIP himself: straight to zone/spot, no typing
+  var lastTok = "";
+  function goPark() { location.href = "../spot/?t=" + encodeURIComponent(lastTok); }
+  document.getElementById("park1").onclick = goPark;
+  document.getElementById("park2").onclick = goPark;
   document.getElementById("next1").onclick = function () { show("sMain"); };
   document.getElementById("next2").onclick = function () { show("sMain"); };
 
