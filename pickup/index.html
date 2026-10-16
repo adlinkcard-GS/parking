@@ -55,9 +55,10 @@
   var ENTRY    = SP_CONFIG.REQUEST_ENTRY;     // the Token Number question
   var AUTO_SUBMIT = SP_CONFIG.AUTO_SUBMIT === true;
 
-  var t = (new URLSearchParams(location.search).get("t") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  // t = "SP0012-K7M2" : car number + secret code (the code is sent, never shown)
+  var t = (new URLSearchParams(location.search).get("t") || "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
   var btn = document.getElementById("go"), msg = document.getElementById("msg");
-  document.getElementById("tok").textContent = t;
+  document.getElementById("tok").textContent = t.split("-")[0];
 
   function done() {
     btn.disabled = true;
@@ -108,7 +109,7 @@
     c.fillStyle = "#ffffff"; c.font = "bold 50px Segoe UI, Arial, sans-serif"; c.textAlign = "center"; c.fillText("SP", W / 2, 138);
     c.fillStyle = "#141e32"; c.font = "bold 34px Segoe UI, Arial, sans-serif"; c.fillText("SMART PARKING", W / 2, 230);
     c.fillStyle = "#636363"; c.font = "bold 26px Segoe UI, Arial, sans-serif"; c.fillText("\u2605  VIP  \u2605", W / 2, 275);
-    c.fillStyle = "#141e32"; c.font = "bold 64px Segoe UI, Arial, sans-serif"; c.fillText(t, W / 2, 360);
+    c.fillStyle = "#141e32"; c.font = "bold 64px Segoe UI, Arial, sans-serif"; c.fillText(t.split("-")[0], W / 2, 360);
     c.drawImage(src, W / 2 - 160, 395, 320, 320);
     c.fillStyle = "#141e32"; c.font = "24px Segoe UI, Arial, sans-serif";
     c.fillText("Scan to request your car", W / 2, 765);
